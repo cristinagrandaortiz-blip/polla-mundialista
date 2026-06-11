@@ -79,8 +79,12 @@ const fl=t=>t?`${F(t)} ${t}`:"";
    M77:1I-3ro M78:2E-2I   M79:1A-3ro M80:1L-3ro
    M81:1D-3ro M82:1G-3ro  M83:2K-2L  M84:1H-2J
    M85:1B-3ro M86:1J-2H   M87:1K-3ro M88:2D-2G
-   R16: M89=W74+W77 M90=W73+W75 M91=W76+W78 M92=W83+W84
-        M93=W86+W88 M94=W85+W87 M95=W81+W82 M96=W79+W80 */
+   R16 oficial: M89=W74+W77 M90=W73+W75 M91=W76+W78 M92=W79+W80
+        M93=W83+W84 M94=W81+W82 M95=W86+W88 M96=W85+W87
+   QF: M97=W89+W90 M98=W93+W94 M99=W91+W92 M100=W95+W96
+   SF: M101=W97+W98 M102=W99+W100
+   (orden interno r16: M89,M90,M93,M94,M91,M92,M95,M96 para que
+    el emparejamiento secuencial reproduzca el cuadro oficial) */
 const R32=[
   ["2A","2B"],    // M73 pos0
   ["1E","3rd1"],  // M74 pos1  vs 3ro (grupos A/B/C/D/F)
@@ -103,13 +107,15 @@ const R32=[
 const R16_PAIRS=[
   [1,4],   // M89: W74 vs W77
   [0,2],   // M90: W73 vs W75
+  [10,11], // M93: W83 vs W84
+  [8,9],   // M94: W81 vs W82
   [3,5],   // M91: W76 vs W78
-  [10,11], // M92: W83 vs W84
-  [13,15], // M93: W86 vs W88
-  [12,14], // M94: W85 vs W87
-  [8,9],   // M95: W81 vs W82
-  [6,7],   // M96: W79 vs W80
+  [6,7],   // M92: W79 vs W80
+  [13,15], // M95: W86 vs W88
+  [12,14], // M96: W85 vs W87
 ];
+/* Números de partido FIFA por ronda (en el orden interno de cada arreglo) */
+const M_NUMS={r32:Array.from({length:16},(_,i)=>73+i),r16:[89,90,93,94,91,92,95,96],qf:[97,98,99,100],sf:[101,102],third:[103],final:[104]};
 /* Rival de cada 3ro en R32 */
 const THIRD_VS=["1°E","1°I","1°A","1°L","1°D","1°G","1°B","1°K"];
 /* Grupos posibles por slot de 3ro */
@@ -148,7 +154,7 @@ const MAX_PTS=155;
    datos de Firebase (Realtime Database). Se ve así:
    https://tu-proyecto-default-rtdb.firebaseio.com
    ════════════════════════════════════════════════════ */
-const FIREBASE_URL="https://polla-familiar-default-rtdb.firebaseio.com/";
+const FIREBASE_URL="https://polla-familiar-default-rtdb.firebaseio.com";
 const DB_URL=FIREBASE_URL.replace(/\/+$/,"")+"/polla2026";
 const DB_CONFIGURADA=/^https:\/\/.+firebasedatabase\.app$|^https:\/\/.+firebaseio\.com$/.test(FIREBASE_URL.replace(/\/+$/,""));
 
@@ -353,22 +359,9 @@ function MatchCard({label,slotDesc,homeTeam,awayTeam,pred,onChange,locked,actual
 
 /* ── CodePanel ──────────────────────── */
 function CodePanel({session,form,locked,onSave,saved}){
-  const[code,setCode]=useState("");const[copied,setCopied]=useState(false);
-  const copy=txt=>{navigator.clipboard.writeText(txt).catch(()=>{const t=document.createElement("textarea");t.value=txt;document.body.appendChild(t);t.select();document.execCommand("copy");document.body.removeChild(t);});};
   return(
     <div style={{marginTop:14}}>
-      {!locked&&<button onClick={onSave} style={{width:"100%",padding:"13px",background:saved?"rgba(34,197,94,0.2)":"#facc15",border:saved?"1px solid #22c55e":"none",borderRadius:12,color:saved?"#4ade80":"#000",fontWeight:800,fontSize:14,cursor:"pointer",transition:"all 0.3s",marginBottom:10}}>{saved?"✓ ¡Guardado!":"💾 Guardar"}</button>}
-      <div style={{background:"rgba(59,130,246,0.08)",border:"1px solid rgba(59,130,246,0.25)",borderRadius:14,padding:12}}>
-        <div style={{fontWeight:700,fontSize:12,color:"#93c5fd",marginBottom:4}}>📤 Código para el admin</div>
-        <div style={{fontSize:10,color:"#64748b",marginBottom:8}}>Genera tu código y mándalo por WhatsApp.</div>
-        <button onClick={()=>setCode(enc({id:session.playerId,name:session.name,pred:form}))}
-          style={{width:"100%",padding:"9px",background:"rgba(59,130,246,0.2)",border:"1px solid rgba(59,130,246,0.3)",borderRadius:9,color:"#93c5fd",fontWeight:700,fontSize:12,cursor:"pointer",marginBottom:code?6:0}}>🔑 Generar código</button>
-        {code&&<>
-          <div style={{background:"#0d1529",borderRadius:7,padding:"5px 8px",fontSize:8,color:"#64748b",wordBreak:"break-all",maxHeight:42,overflowY:"auto",marginBottom:6,fontFamily:"monospace"}}>{code}</div>
-          <button onClick={()=>{copy(code);setCopied(true);setTimeout(()=>setCopied(false),2500);}}
-            style={{width:"100%",padding:"9px",background:copied?"rgba(34,197,94,0.15)":"rgba(255,255,255,0.06)",border:copied?"1px solid #22c55e":"1px solid rgba(255,255,255,0.1)",borderRadius:8,color:copied?"#4ade80":"white",fontWeight:700,fontSize:12,cursor:"pointer"}}>{copied?"✓ ¡Copiado!":"📋 Copiar"}</button>
-        </>}
-      </div>
+      {!locked&&<button onClick={onSave} style={{width:"100%",padding:"13px",background:saved?"rgba(34,197,94,0.2)":"#facc15",border:saved?"1px solid #22c55e":"none",borderRadius:12,color:saved?"#4ade80":"#000",fontWeight:800,fontSize:14,cursor:"pointer",transition:"all 0.3s"}}>{saved?"✓ ¡Guardado!":"💾 Guardar"}</button>}
     </div>
   );
 }
@@ -693,7 +686,7 @@ function BracketView({data,session,onSave,setView}){
       {teams.map((m,i)=>{
         const sDesc=activeR==="r32"?`${sName(R32[i][0])} vs ${sName(R32[i][1])}`:"";
         const aM=data.actual.knockout?.[activeR]?.[i];
-        return<MatchCard key={i} label={`${ri?.emoji} ${ri?.label} · P${i+1}`} slotDesc={sDesc}
+        return<MatchCard key={i} label={`${ri?.emoji} ${ri?.label} · M${M_NUMS[activeR][i]}`} slotDesc={sDesc}
           homeTeam={m.home} awayTeam={m.away}
           pred={form.knockout?.[activeR]?.[i]}
           onChange={!locked?(val=>updMatch(i,val)):null}
@@ -879,7 +872,7 @@ function AdminBracketTab({data,onUpdate}){
         <div style={{fontSize:10,color:"#64748b"}}>{ri?.count} partidos · guarda antes de cambiar ronda</div>
       </Card>
       {teams.some(m=>m.home||m.away)?teams.map((m,i)=>
-        <MatchCard key={i} label={`${ri?.emoji} ${ri?.label} · P${i+1}`} slotDesc={activeR==="r32"?`${sName(R32[i][0])} vs ${sName(R32[i][1])}`:""}
+        <MatchCard key={i} label={`${ri?.emoji} ${ri?.label} · M${M_NUMS[activeR][i]}`} slotDesc={activeR==="r32"?`${sName(R32[i][0])} vs ${sName(R32[i][1])}`:""}
           homeTeam={m.home} awayTeam={m.away} pred={roundData[i]} onChange={val=>updM(i,val)} locked={false}/>
       ):<Card style={{textAlign:"center",padding:"20px 0",color:"#475569"}}><div style={{fontSize:13}}>Completa las fases anteriores primero.</div></Card>}
       <button onClick={save} style={{width:"100%",padding:"13px",background:"#facc15",borderRadius:12,border:"none",color:"#000",fontWeight:800,fontSize:14,cursor:"pointer",marginTop:8}}>💾 Guardar {ri?.label}</button>
@@ -1108,7 +1101,7 @@ function ofImport(raw,actual){
   matches.forEach(m=>{
     let rk=null,idx=0;
     if(m.num>=73&&m.num<=88){rk="r32";idx=m.num-73;}
-    else if(m.num>=89&&m.num<=96){rk="r16";idx=m.num-89;}
+    else if(m.num>=89&&m.num<=96){rk="r16";idx={89:0,90:1,91:4,92:5,93:2,94:3,95:6,96:7}[m.num];}
     else if(m.num>=97&&m.num<=100){rk="qf";idx=m.num-97;}
     else if(m.num>=101&&m.num<=102){rk="sf";idx=m.num-101;}
     else if(m.round==="Match for third place"){rk="third";idx=0;}
@@ -1174,7 +1167,7 @@ function AdminView({data,onUpdate,setView}){
       </Card>
     </div>
   );
-  const tabs=[["players","👥","Jugadores"],["sync","🔄","Resultados"],["groups","📋","Grupos"],["bracket","🏆","Bracket"],["import","📥","Importar"],["phases","⚙️","Fases"],["config","🔧","Config"]];
+  const tabs=[["players","👥","Jugadores"],["sync","🔄","Resultados"],["groups","📋","Grupos"],["bracket","🏆","Bracket"],["phases","⚙️","Fases"],["config","🔧","Config"]];
   return(
     <div style={{padding:16}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
@@ -1185,7 +1178,6 @@ function AdminView({data,onUpdate,setView}){
         {tabs.map(([k,ic,l])=><button key={k} onClick={()=>setTab(k)} style={{flexShrink:0,padding:"7px 10px",borderRadius:9,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:tab===k?"#facc15":"rgba(255,255,255,0.06)",color:tab===k?"#000":"#64748b"}}>{ic} {l}</button>)}
       </div>
       {tab==="players"&&<AdminPlayersTab data={data} onUpdate={onUpdate}/>}
-      {tab==="import"&&<AdminImportTab data={data} onUpdate={onUpdate}/>}
       {tab==="sync"&&<AdminSyncTab data={data} onUpdate={onUpdate}/>}
       {tab==="groups"&&<AdminGroupsTab data={data} onUpdate={onUpdate}/>}
       {tab==="bracket"&&<AdminBracketTab data={data} onUpdate={onUpdate}/>}
@@ -1200,9 +1192,9 @@ function AdminView({data,onUpdate,setView}){
 /* ═══════════════════════════════════════
    BRACKET TREE VIEW (Llaves)
 ═══════════════════════════════════════ */
-const R32_VIS=[1,4,0,2,3,5,10,11,13,15,12,14,8,9,6,7];
-const R32_LBL=["M74","M77","M73","M75","M76","M78","M83","M84","M86","M88","M85","M87","M81","M82","M79","M80"];
-const R16_LBL=["M89","M90","M91","M92","M93","M94","M95","M96"];
+const R32_VIS=[1,4,0,2,10,11,8,9,3,5,6,7,13,15,12,14];
+const R32_LBL=["M74","M77","M73","M75","M83","M84","M81","M82","M76","M78","M79","M80","M86","M88","M85","M87"];
+const R16_LBL=["M89","M90","M93","M94","M91","M92","M95","M96"];
 const QF_LBL=["M97","M98","M99","M100"];
 const SF_LBL=["SF1\u00b7Dallas","SF2\u00b7Atlanta"];
 
