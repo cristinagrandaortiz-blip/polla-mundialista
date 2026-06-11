@@ -196,7 +196,7 @@ function fixData(raw){
     phases:{...d.settings.phases,...(raw.settings.phases||{})}};
   return d;
 }
-const T0=new Date("2026-06-11T23:59:00-05:00"); /* cierre: medianoche de Ecuador */
+const T0=new Date("2026-06-12T23:59:00-05:00"); /* cierre: viernes 12 jun a medianoche, hora Ecuador */
 
 /* ═══════════════════════════════════════
    HELPERS
@@ -224,7 +224,22 @@ function getAvailThirds(predGroups,thirds,idx){
   GK.forEach(g=>{if(predGroups?.[g]?.first)qual.add(predGroups[g].first);if(predGroups?.[g]?.second)qual.add(predGroups[g].second);});
   const usedG=new Set();
   thirds.forEach((t,i)=>{if(i!==idx&&t&&TEAM_GROUP[t])usedG.add(TEAM_GROUP[t]);});
-  return ALL_TEAMS.filter(t=>t&&!qual.has(t)&&!usedG.has(TEAM_GROUP[t]));
+  /* regla FIFA: el 3ro de cada slot solo puede venir de los grupos permitidos
+     (nunca del grupo de su rival — así no se repite un partido de la fase de grupos) */
+  return ALL_TEAMS.filter(t=>t&&!qual.has(t)&&!usedG.has(TEAM_GROUP[t])&&THIRD_GROUPS[idx].includes(TEAM_GROUP[t]));
+}
+/* Valida los 3ros guardados: devuelve los números de slot con problemas */
+function valThirds(predGroups,thirds){
+  const qual=new Set();
+  GK.forEach(g=>{if(predGroups?.[g]?.first)qual.add(predGroups[g].first);if(predGroups?.[g]?.second)qual.add(predGroups[g].second);});
+  const malos=[];const vistos=new Set();
+  (thirds||[]).forEach((t,i)=>{
+    if(!t)return;
+    const g=TEAM_GROUP[t];
+    if(qual.has(t)||vistos.has(g)||!THIRD_GROUPS[i].includes(g))malos.push(i+1);
+    vistos.add(g);
+  });
+  return malos;
 }
 
 function rSlotUser(slot,pred){
@@ -503,7 +518,10 @@ function PicksView({data,session,onSave,setView}){
 
   const updG=(g,pos,v)=>setForm(f=>({...f,groups:{...f.groups,[g]:{...f.groups[g],[pos]:v}}}));
   const updT=(i,v)=>setForm(f=>{const t=[...f.thirds];t[i]=v;return{...f,thirds:t};});
-  const save=()=>{onSave(session.playerId,form);setSaved(true);setTimeout(()=>setSaved(false),2500);};
+  const save=()=>{
+    const malos=valThirds(form.groups,form.thirds);
+    if(malos.length){alert("⚠️ Revisa los mejores 3ros — slot(s) "+malos.join(", ")+": el equipo ya clasificó como 1°/2°, su grupo está repetido, o no corresponde a los grupos permitidos de ese slot (no puede repetirse un cruce de la fase de grupos). Corrige y vuelve a guardar.");return;}
+    onSave(session.playerId,form);setSaved(true);setTimeout(()=>setSaved(false),2500);};
 
   const gDone=Object.values(form.groups).filter(g=>g.first&&g.second).length;
   const t3Done=(form.thirds||[]).filter(Boolean).length;
@@ -771,7 +789,10 @@ function AdminGroupsTab({data,onUpdate}){
   const[saved,setSaved]=useState(false);
   const updG=(g,pos,v)=>setForm(f=>({...f,groups:{...f.groups,[g]:{...f.groups[g],[pos]:v}}}));
   const updT=(i,v)=>setForm(f=>{const t=[...f.thirds];t[i]=v;return{...f,thirds:t};});
-  const save=()=>{onUpdate({actual:{...data.actual,groups:form.groups,thirds:form.thirds}});setSaved(true);setTimeout(()=>setSaved(false),2500);};
+  const save=()=>{
+    const malos=valThirds(form.groups,form.thirds);
+    if(malos.length){alert("⚠️ Revisa los 3ros reales — slot(s) "+malos.join(", ")+" no cumplen la regla FIFA del slot.");return;}
+    onUpdate({actual:{...data.actual,groups:form.groups,thirds:form.thirds}});setSaved(true);setTimeout(()=>setSaved(false),2500);};
   return(
     <div>
       {saved&&<Flash msg="✓ Guardado"/>}
@@ -1001,7 +1022,7 @@ function AdminPhasesTab({data,onUpdate}){
   ];
   return(
     <div>
-      <div style={{background:"rgba(248,113,113,0.08)",border:"1px solid rgba(248,113,113,0.2)",borderRadius:10,padding:"10px 12px",fontSize:11,color:"#fca5a5",marginBottom:14}}>⚠️ El 11 jun 2026 a las 23:59 (Ecuador) todo se bloquea automáticamente.</div>
+      <div style={{background:"rgba(248,113,113,0.08)",border:"1px solid rgba(248,113,113,0.2)",borderRadius:10,padding:"10px 12px",fontSize:11,color:"#fca5a5",marginBottom:14}}>⚠️ El 12 jun 2026 a las 23:59 (Ecuador) todo se bloquea automáticamente.</div>
       {phases.map(ph=>{const open=settings.phases[ph.key];return(
         <div key={ph.key} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:12,marginBottom:8}}>
           <div style={{flex:1,fontWeight:700,fontSize:13}}>{ph.label}</div>
